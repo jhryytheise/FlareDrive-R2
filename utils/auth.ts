@@ -13,13 +13,37 @@ function matchesAllowList(targetPath, allowList) {
   return allowList.some((allow) => targetPath.startsWith(allow));
 }
 
+/**
+ * 环境变量格式: 变量名=用户名, 值=密码:权限路径
+ * 例如: admin=123456:*
+ *       user1=mypassword:user1/,shared/
+ *
+ * 原始项目用 用户名:密码 作为变量名，但 Cloudflare Pages 不支持冒号。
+ */
 function getAllowListForRequest(context) {
   const headers = new Headers(context.request.headers);
   const authorization = headers.get("Authorization");
   if (authorization && authorization.startsWith("Basic ")) {
-    const account = atob(authorization.split("Basic ")[1]);
-    if (account && context.env[account]) {
-      return parseAllowList(context.env[account]);
+    const decoded = atob(authorization.split("Basic ")[1]); // "admin:123456"
+    const colonIndex = decoded.indexOf(":");
+    if (colonIndex === -1) return null;
+
+    const username = decoded.substring(0, colonIndex);
+    const password = decoded.substring(colonIndex + 1);
+
+    // 查找 env 中以用户名为 key 的变量
+    const envValue = context.env[username];
+    if (envValue) {
+      // 值格式: "密码:权限路径"  例如 "123456:*" 或 "mypass:user1/,shared/"
+      const firstColon = envValue.indexOf(":");
+      if (firstColon === -1) return null;
+
+      const envPassword = envValue.substring(0, firstColon);
+      const paths = envValue.substring(firstColon + 1);
+
+      if (password === envPassword) {
+        return parseAllowList(paths);
+      }
     }
   }
   if (context.env["GUEST"]) {
