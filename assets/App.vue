@@ -86,11 +86,11 @@
           </div>
         </li>
         <li v-for="file in filteredFiles" :key="file.key">
-          <div @click="preview(`/raw/${file.key}`)" @contextmenu.prevent="
+          <div @click="preview(`${puburl}/${file.key}`)" @contextmenu.prevent="
             showContextMenu = true;
           focusedItem = file;" class="file-item" style="position: relative;">
             <MimeIcon :content-type="file.httpMetadata.contentType" :thumbnail="file.customMetadata.thumbnail
-              ? `/raw/_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`
+              ? `${puburl}/_$flaredrive$/thumbnails/${file.customMetadata.thumbnail}.png`
               : null
               " />
             <div class="file-info-container">
@@ -151,7 +151,7 @@
           </button>
         </li>
         <li>
-          <a :href="`/raw/${focusedItem.key}`" target="_blank" download>
+          <a :href="`${puburl}/${focusedItem.key}`" target="_blank" download>
             <span>下载</span>
           </a>
         </li>
@@ -166,7 +166,7 @@
           </button>
         </li>
         <li>
-          <button @click="copyLink(`/raw/${focusedItem.key}`)">
+          <button @click="copyLink(`${puburl}/${focusedItem.key}`)">
             <span>复制链接</span>
           </button>
         </li>
@@ -211,6 +211,7 @@ export default {
     uploadProgress: null,
     uploadQueue: [],
     backgroundImageUrl: "/assets/bg-light.webp"
+    puburl: ""
   }),
 
   computed: {
@@ -611,6 +612,9 @@ export default {
   },
 
   created() {
+        fetch("/api/puburl").then(r => r.text()).then(url => {
+    this.puburl = url.replace(/\/+$/, "");
+  });
     window.addEventListener("popstate", (ev) => {
       const searchParams = new URL(window.location).searchParams;
       if (searchParams.get("p") !== this.cwd)
